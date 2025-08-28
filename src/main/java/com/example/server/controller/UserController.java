@@ -86,7 +86,7 @@ public class UserController {
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
         User user = getUserFromRequest(request);
         if (user == null)
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+            return ResponseEntity.ok(null);
         user.setPassword(null);
         return ResponseEntity.ok(user);
     }
@@ -99,7 +99,7 @@ public class UserController {
 
             User user = getUserFromRequest(request);
             if (user == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+                return ResponseEntity.ok(null);
             }
 
             if (user.getBalance() == null)
@@ -112,7 +112,7 @@ public class UserController {
             user.setPassword(null);
             return ResponseEntity.ok(user);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating balance");
+            return ResponseEntity.ok(null);
         }
     }
 
@@ -172,16 +172,16 @@ public class UserController {
             String description = body.getOrDefault("description", "").toString();
 
             if (amount.compareTo(BigDecimal.ZERO) <= 0)
-                return ResponseEntity.badRequest().body("Amount must be greater than zero");
+                return ResponseEntity.ok(null);
 
             User user = getUserFromRequest(request);
             if (user == null)
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+                return ResponseEntity.ok(null);
 
             if (user.getBalance() == null)
                 user.setBalance(BigDecimal.ZERO);
             if (user.getBalance().compareTo(amount) < 0)
-                return ResponseEntity.badRequest().body("Insufficient funds");
+                return ResponseEntity.ok(null);
 
             user.setBalance(user.getBalance().subtract(amount));
             userRepository.save(user);
@@ -197,7 +197,7 @@ public class UserController {
             user.setPassword(null);
             return ResponseEntity.ok(user);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error subtracting balance");
+            return ResponseEntity.ok(null);
         }
     }
 
@@ -206,13 +206,13 @@ public class UserController {
         try {
             User user = getUserFromRequest(request);
             if (user == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+                return ResponseEntity.ok(null);
             }
 
             List<ConsumptionHistory> history = consumptionHistoryRepository.findByUserOrderByDateDesc(user);
             return ResponseEntity.ok(history);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching history");
+            return ResponseEntity.ok(null);
         }
     }
 
@@ -224,7 +224,7 @@ public class UserController {
         cookie.setPath("/");
         response.addCookie(cookie);
 
-        return ResponseEntity.ok("Logged out");
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping("/summary")
@@ -232,8 +232,7 @@ public class UserController {
         try {
             User user = getUserFromRequest(request);
             if (user == null) {
-                System.out.println("JWT error!");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+                return ResponseEntity.ok(null);
             }
 
             BigDecimal totalIncome = consumptionHistoryRepository.sumByUserAndType(user, "INCOME");
@@ -248,8 +247,7 @@ public class UserController {
                     "totalExpense", totalExpense,
                     "balance", user.getBalance()));
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.ok(null);
         }
     }
 
@@ -258,18 +256,20 @@ public class UserController {
         try {
             BigDecimal amount = new BigDecimal(body.get("amount").toString());
             String description = body.getOrDefault("description", "").toString();
+            String currency = body.getOrDefault("currency", "USD").toString();
 
             if (amount.compareTo(BigDecimal.ZERO) <= 0)
-                return ResponseEntity.badRequest().body("Amount must be greater than zero");
+                return ResponseEntity.ok(null);
 
             User user = getUserFromRequest(request);
             if (user == null)
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+                return ResponseEntity.ok(null);
 
             if (user.getBalance() == null)
                 user.setBalance(BigDecimal.ZERO);
 
             user.setBalance(user.getBalance().add(amount));
+            user.setValute(currency.toUpperCase());
             userRepository.save(user);
 
             ConsumptionHistory history = new ConsumptionHistory();
@@ -283,7 +283,30 @@ public class UserController {
             user.setPassword(null);
             return ResponseEntity.ok(user);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error adding income");
+            return ResponseEntity.ok(null);
+        }
+    }
+
+    @PostMapping("/valute")
+    public ResponseEntity<?> updateValute(HttpServletRequest request, @RequestBody Map<String, String> body) {
+        try {
+            User user = getUserFromRequest(request);
+            if (user == null) {
+                return ResponseEntity.ok(null);
+            }
+
+            String newValute = body.get("valute");
+            if (newValute == null || newValute.isEmpty()) {
+                return ResponseEntity.ok(null);
+            }
+
+            user.setValute(newValute.toUpperCase());
+            userRepository.save(user);
+
+            user.setPassword(null);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            return ResponseEntity.ok(null);
         }
     }
 

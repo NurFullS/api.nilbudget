@@ -25,7 +25,6 @@ public class ConsumptionHistory {
     @Column(nullable = false)
     private LocalDateTime date;
 
-    // Переименовали колонку, чтобы избежать конфликта с зарезервированным словом
     @Column(name = "consumption_type", nullable = false)
     private String type;
 
