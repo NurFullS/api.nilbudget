@@ -169,6 +169,7 @@ public class UserController {
         response.addCookie(cookie);
     }
 
+    
     private User getUserFromRequest(HttpServletRequest request) {
         try {
             Cookie[] cookies = request.getCookies();
@@ -190,35 +191,35 @@ public class UserController {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-
-            Long userId = Long.parseLong(claims.getSubject());
-            return userRepository.findById(userId).orElse(null);
-        } catch (Exception e) {
-            return null;
-        }
+                    
+                    Long userId = Long.parseLong(claims.getSubject());
+                    return userRepository.findById(userId).orElse(null);
+                } catch (Exception e) {
+                    return null;
+                }
     }
-
+    
     @PostMapping("/consumption")
     public ResponseEntity<?> subtractBalance(HttpServletRequest request, @RequestBody Map<String, Object> body) {
         try {
             BigDecimal amount = new BigDecimal(body.get("amount").toString());
             String description = body.getOrDefault("description", "").toString();
-
+            
             if (amount.compareTo(BigDecimal.ZERO) <= 0)
-                return ResponseEntity.ok(null);
+            return ResponseEntity.ok(null);
 
             User user = getUserFromRequest(request);
             if (user == null)
-                return ResponseEntity.ok(null);
+            return ResponseEntity.ok(null);
 
             if (user.getBalance() == null)
                 user.setBalance(BigDecimal.ZERO);
             if (user.getBalance().compareTo(amount) < 0)
-                return ResponseEntity.ok(null);
-
+            return ResponseEntity.ok(null);
+            
             user.setBalance(user.getBalance().subtract(amount));
             userRepository.save(user);
-
+            
             ConsumptionHistory history = new ConsumptionHistory();
             history.setUser(user);
             history.setAmount(amount);
@@ -226,14 +227,14 @@ public class UserController {
             history.setDate(LocalDateTime.now());
             history.setType("EXPENSE");
             consumptionHistoryRepository.save(history);
-
+            
             user.setPassword(null);
             return ResponseEntity.ok(user);
         } catch (Exception e) {
             return ResponseEntity.ok(null);
         }
     }
-
+    
     @GetMapping("/consumption/history")
     public ResponseEntity<?> getConsumptionHistory(HttpServletRequest request) {
         try {
@@ -248,7 +249,7 @@ public class UserController {
             return ResponseEntity.ok(null);
         }
     }
-
+    
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
         Cookie cookie = new Cookie("jwt", null);
@@ -259,7 +260,7 @@ public class UserController {
 
         return ResponseEntity.ok(null);
     }
-
+    
     @GetMapping("/summary")
     public ResponseEntity<?> getSummary(HttpServletRequest request) {
         try {
@@ -270,13 +271,13 @@ public class UserController {
 
             BigDecimal totalIncome = consumptionHistoryRepository.sumByUserAndType(user, "INCOME");
             BigDecimal totalExpense = consumptionHistoryRepository.sumByUserAndType(user, "EXPENSE");
-
+            
             totalIncome = totalIncome != null ? totalIncome : BigDecimal.ZERO;
             totalExpense = totalExpense != null ? totalExpense : BigDecimal.ZERO;
             user.setBalance(user.getBalance() != null ? user.getBalance() : BigDecimal.ZERO);
-
+            
             return ResponseEntity.ok(Map.of(
-                    "totalIncome", totalIncome,
+                "totalIncome", totalIncome,
                     "totalExpense", totalExpense,
                     "balance", user.getBalance()));
         } catch (Exception e) {
@@ -292,32 +293,32 @@ public class UserController {
             String currency = body.getOrDefault("currency", "USD").toString();
 
             if (amount.compareTo(BigDecimal.ZERO) <= 0)
-                return ResponseEntity.ok(null);
-
+            return ResponseEntity.ok(null);
+            
             User user = getUserFromRequest(request);
             if (user == null)
-                return ResponseEntity.ok(null);
-
+            return ResponseEntity.ok(null);
+            
             if (user.getBalance() == null)
                 user.setBalance(BigDecimal.ZERO);
-
-            user.setBalance(user.getBalance().add(amount));
-            user.setValute(currency.toUpperCase());
-            userRepository.save(user);
-
-            ConsumptionHistory history = new ConsumptionHistory();
-            history.setUser(user);
-            history.setAmount(amount);
-            history.setDescription(description);
-            history.setDate(LocalDateTime.now());
-            history.setType("INCOME");
-            consumptionHistoryRepository.save(history);
-
-            user.setPassword(null);
-            return ResponseEntity.ok(user);
-        } catch (Exception e) {
-            return ResponseEntity.ok(null);
-        }
+                
+                user.setBalance(user.getBalance().add(amount));
+                user.setValute(currency.toUpperCase());
+                userRepository.save(user);
+                
+                ConsumptionHistory history = new ConsumptionHistory();
+                history.setUser(user);
+                history.setAmount(amount);
+                history.setDescription(description);
+                history.setDate(LocalDateTime.now());
+                history.setType("INCOME");
+                consumptionHistoryRepository.save(history);
+                
+                user.setPassword(null);
+                return ResponseEntity.ok(user);
+            } catch (Exception e) {
+                return ResponseEntity.ok(null);
+            }
     }
 
     @PostMapping("/valute")
@@ -327,12 +328,12 @@ public class UserController {
             if (user == null) {
                 return ResponseEntity.ok(null);
             }
-
+            
             String newValute = body.get("valute");
             if (newValute == null || newValute.isEmpty()) {
                 return ResponseEntity.ok(null);
             }
-
+            
             user.setValute(newValute.toUpperCase());
             userRepository.save(user);
 
@@ -342,5 +343,9 @@ public class UserController {
             return ResponseEntity.ok(null);
         }
     }
-
+    
+    @PostMapping("/finish")
+    public String finish() {
+        return "Finished project!";
+    }
 }
