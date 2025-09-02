@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 import java.util.List;
 
 @RestController
@@ -89,6 +90,38 @@ public class UserController {
             return ResponseEntity.ok(null);
         user.setPassword(null);
         return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        try {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null) {
+                return ResponseEntity.ok(null);
+            }
+            user.setPassword(null);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            return ResponseEntity.ok(null);
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUserById(@PathVariable Long id, HttpServletResponse response) {
+        Optional<User> user = userRepository.findById(id);
+        if (user.isPresent()) {
+            userRepository.delete(user.get());
+
+            Cookie cookie = new Cookie("jwt", null);
+            cookie.setHttpOnly(true);
+            cookie.setMaxAge(0);
+            cookie.setPath("/");
+            response.addCookie(cookie);
+
+            return ResponseEntity.ok("User deleted successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
     }
 
     @PostMapping("/balance")
